@@ -36,14 +36,24 @@ all_y = np.concatenate((train_y, test_y, val_y))
 
 tree = DecisionTreeClassifier(random_state=0, min_samples_leaf=5, class_weight="balanced")
 # clf.fit(val_X, val_y)
-clf = GridSearchCV(tree, tree_config, verbose=3,n_jobs=10)
+clf = GridSearchCV(tree, tree_config, verbose=3,n_jobs=-1)
 clf.fit(all_X, all_y)
 
 print(clf.cv_results_,clf.best_params_)
 '''
+max_depht=13, min_samples_leaf=26
 max_depth=13, min_samples_leaf=31, score=0.835, total=12.5min
 max_depth=13, min_samples_leaf=41, score=0.835, total=13.0min
 '''
 
 
-
+def validate_alg():
+    correct = 0
+    for sample, label in zip(val_X, val_y):
+        prediction = clf.predict([sample])
+        if prediction == label:
+            correct += 1
+        else:
+            pass
+            # possible to add samples that the algorithm did not guess
+    print(correct / len(val_y))
