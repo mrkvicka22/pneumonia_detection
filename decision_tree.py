@@ -2,7 +2,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import cross_val_score, GridSearchCV
 from create_datasets import DataSet
 import numpy as np
-
+import time
 
 tree_config = {"max_depth":list(range(3,35,5)),
                "min_samples_leaf":list(range(1,50,5)),
@@ -34,12 +34,12 @@ all_y = np.concatenate((train_y, test_y, val_y))
 #
 #
 
-tree = DecisionTreeClassifier(random_state=0, min_samples_leaf=5, class_weight="balanced")
-# clf.fit(val_X, val_y)
-clf = GridSearchCV(tree, tree_config, verbose=3,n_jobs=-1)
-clf.fit(all_X, all_y)
-
-print(clf.cv_results_,clf.best_params_)
+# tree = DecisionTreeClassifier(random_state=0, min_samples_leaf=5, class_weight="balanced")
+# # clf.fit(val_X, val_y)
+# clf = GridSearchCV(tree, tree_config, verbose=3,n_jobs=-1)
+# clf.fit(all_X, all_y)
+#
+# print(clf.cv_results_,clf.best_params_)
 '''
 max_depht=13, min_samples_leaf=26
 max_depth=13, min_samples_leaf=31, score=0.835, total=12.5min
@@ -47,13 +47,37 @@ max_depth=13, min_samples_leaf=41, score=0.835, total=13.0min
 '''
 
 
-def validate_alg():
+def validate_alg(classifier):
     correct = 0
     for sample, label in zip(val_X, val_y):
-        prediction = clf.predict([sample])
+        prediction = classifier.predict([sample])
         if prediction == label:
             correct += 1
         else:
             pass
             # possible to add samples that the algorithm did not guess
-    print(correct / len(val_y))
+    return correct / len(val_y)
+
+
+best_guys = []
+max_score = 0
+best_guy = None
+for crit in ["gini","entropy"]:
+    for depth in range(6,35,4):
+        for leaves in range(20,50,4):
+            tree = DecisionTreeClassifier(random_state=0,max_depth=depth, min_samples_leaf=leaves, class_weight="balanced",criterion=crit)
+            start_time = time.time()
+            tree.fit(train_X,train_y)
+            train_time = time.time() - start_time
+            score = validate_alg(tree)
+            print(f"accuracy= {score}", f"depth={depth}", f"leaves={leaves}", f"training_time= {train_time}s", end=" ")
+            if score > max_score:
+                max_score = score
+                best_guys.append([tree,score])
+                best_guy = tree
+                print("new max")
+            elif score > 0.75:
+                best_guys.append([tree, score])
+                print("decent")
+            else:
+                print("and it was subpar")
