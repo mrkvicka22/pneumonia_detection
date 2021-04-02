@@ -1,31 +1,35 @@
 from sklearn.tree import DecisionTreeClassifier
-from create_datasets import DataSet
+from torch.utils.data import random_split
+from dataset_class import PneumoniaDataset
+from torchvision import transforms
 import numpy as np
 import time
+from collections import Counter
 
 tree_config = {"max_depth":list(range(3,35,5)),
                "min_samples_leaf":list(range(1,50,5)),
                }
 
+transformations = transforms.Compose([transforms.Grayscale(), transforms.Resize((128, 128)), transforms.ToTensor(),
+                                      transforms.Normalize(mean=0.48814950165, std=0.24329058187339847)])
+# Call the dataset
 
-whole_dataset = DataSet()
-whole_dataset.load(r"C:\Users\Matej\PycharmProjects\pneumonia_detection\pneumonia_data_pickled")
-train_data_images, train_data_labels = whole_dataset.shuffled_batches("train", batchsize=0)
-test_data_images, test_data_labels = whole_dataset.shuffled_batches("test", batchsize=0)
-val_data_images, val_data_labels = whole_dataset.shuffled_batches("val", batchsize=0)
+whole_dataset = PneumoniaDataset(path=r"C:\Users\Matej\PycharmProjects\pneumonia_detection\data_indexer", transforms=transformations)
 
-train_X = [img.flatten() for img in train_data_images]
-train_y = train_data_labels
-print(len(train_y))
+#split it into datasets of 70/15/15
+lengths = [round(len(whole_dataset)*0.7), round(len(whole_dataset) * 0.15), round(len(whole_dataset) * 0.15)- (round(
+    len(whole_dataset) * 0.7) + round(len(whole_dataset) * 0.15) + round(len(whole_dataset) * 0.15) - len(whole_dataset))]
+train_dataset,test_dataset,val_dataset = random_split(whole_dataset, lengths)
 
-test_X = [img.flatten() for img in test_data_images]
-test_y = test_data_labels
 
-val_X = [img.flatten() for img in val_data_images]
-val_y = val_data_labels
+val_X = [x.flatten().numpy() for x, y in val_dataset]
+val_y = [[y] for x, y in val_dataset]
 
-all_X = np.concatenate((train_X, test_X, val_X))
-all_y = np.concatenate((train_y, test_y, val_y))
+test_X = [x.flatten().numpy() for x, y in test_dataset]
+test_y = [[y] for x, y in test_dataset]
+
+train_X = [x.flatten().numpy() for x, y in train_dataset]
+train_y = [[y] for x, y in train_dataset]
 
 
 '''
@@ -33,7 +37,6 @@ max_depht=13, min_samples_leaf=26
 max_depth=13, min_samples_leaf=31, score=0.835, total=12.5min
 max_depth=13, min_samples_leaf=41, score=0.835, total=13.0min
 '''
-
 
 def comb(poss_list):
     if type(poss_list) == dict:
@@ -76,7 +79,7 @@ def validate_on_training(classifier):
 best_guys = []
 max_score = 0
 best_guy = None
-config = {"max_depth": list(range(10, 20)), "min_samples_leaf": list(range(2, 20))}
+config = {"max_depth": list(range(10, 50,3)), "min_samples_leaf": list(range(5, 155,5)),"class_weight":["balanced"]}
 for setup in comb(config):
     dicc = dict(zip(config.keys(),setup))
     tree = DecisionTreeClassifier(**dicc)
